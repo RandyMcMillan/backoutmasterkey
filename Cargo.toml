@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Gregory Sanders <gsanders87@gmail.com>"]
 
 [dependencies]
-bitcoin = "0.10.6"
+bitcoin = "0.32.5"
 secp256k1 = "0.30.0"
 hex-literal = "0.1.0"
