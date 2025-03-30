@@ -67,7 +67,7 @@ fn main() {
     // Subtract the tweak from the child private key to get the parent private key.
     let mut child_secret = child_privkey.secret_key().clone();
 
-    let parent_secret = match child_secret.add(&ctx, &neg_tweak) {
+    let parent_secret = match child_secret.add_tweak(&ctx, &neg_tweak) {
         Ok(secret) => secret,
         Err(e) => {
             eprintln!("Error adding secret keys: {:?}", e);
