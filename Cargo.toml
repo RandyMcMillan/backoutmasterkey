@@ -5,5 +5,5 @@ authors = ["Gregory Sanders <gsanders87@gmail.com>"]
 
 [dependencies]
 bitcoin = "0.10.6"
-secp256k1 = "0.6.3"
+secp256k1 = "0.30.0"
 hex-literal = "0.1.0"
