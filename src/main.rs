@@ -2,9 +2,9 @@ use std::io::{self, Write};
 use std::process;
 extern crate bitcoin;
 extern crate secp256k1;
-use bitcoin::util::bip32;
-use bitcoin::util::base58::FromBase58;
-use bitcoin::util::base58::ToBase58;
+//use bitcoin::util::bip32;
+//use bitcoin::util::base58::FromBase58;
+//use bitcoin::util::base58::ToBase58;
 use secp256k1::{Secp256k1, SecretKey};
 
 fn main() {
