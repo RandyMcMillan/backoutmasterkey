@@ -5,7 +5,7 @@ extern crate secp256k1;
 use bitcoin::util::bip32;
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::base58::ToBase58;
-use secp256k1::{Secp256k1, SecretKey};
+use secp256k1::{Secp256k1, key::SecretKey};
 
 fn main() {
     println!("Enter: <xpub> <derivation_index> <child_privkey>");
