@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::process;
 extern crate bitcoin;
+use bitcoin::*;
 extern crate secp256k1;
 //use bitcoin::util::bip32;
 //use bitcoin::util::base58::FromBase58;
