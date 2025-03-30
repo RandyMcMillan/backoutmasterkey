@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 use std::process;
-
+use extern crate bitcoin;
 use bitcoin::util::bip32;
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::base58::ToBase58;
