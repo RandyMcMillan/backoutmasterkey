@@ -1,51 +1,91 @@
-use std::io::{self};
-use std::process::{self};
+use std::io::{self, Write};
+use std::process;
 
-extern crate bitcoin;
-extern crate secp256k1;
-extern crate core;
-#[macro_use] extern crate hex_literal;
 use bitcoin::util::bip32;
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::base58::ToBase58;
-use std::io::Write;
-use core::convert::From;
+use secp256k1::{Secp256k1, SecretKey};
 
 fn main() {
-    println!("Enter: <xpub> <derivation_index> <privkey>");
+    println!("Enter: <xpub> <derivation_index> <child_privkey>");
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
-        Ok(_) => {
-        }
+        Ok(_) => {}
         Err(error) => {
-            writeln!(::std::io::stderr(), "{}", error).ok();  // the `.ok()` means even if it fails, ignore it. We are exiting any way. I think it's a common pattern to abuse `ok()` like this?
+            writeln!(::std::io::stderr(), "{}", error).ok();
             process::exit(1);
         }
     }
-    let v: Vec<&str> = input.split(' ').collect();
-    assert_eq!(v.len(), 3);
-    let extpub_result = bip32::ExtendedPubKey::from_base58check(v[0]).unwrap();
-    let index = v[1].parse::<u32>().unwrap();
+    let v: Vec<&str> = input.trim().split(' ').collect();
+    if v.len() != 3 {
+        eprintln!("Invalid input. Expected: <xpub> <derivation_index> <child_privkey>");
+        process::exit(1);
+    }
+
+    let xpub_str = v[0];
+    let index_str = v[1];
+    let child_privkey_str = v[2].trim();
+
+    let extpub_result = match bip32::ExtendedPubKey::from_base58check(xpub_str) {
+        Ok(xpub) => xpub,
+        Err(e) => {
+            eprintln!("Invalid xpub: {}", e);
+            process::exit(1);
+        }
+    };
+
+    let index = match index_str.parse::<u32>() {
+        Ok(idx) => idx,
+        Err(e) => {
+            eprintln!("Invalid derivation index: {}", e);
+            process::exit(1);
+        }
+    };
+
+    let child_privkey = match bitcoin::util::address::Privkey::from_base58check(child_privkey_str) {
+        Ok(privkey) => privkey,
+        Err(e) => {
+            eprintln!("Invalid child private key: {}", e);
+            process::exit(1);
+        }
+    };
+
     let network = bitcoin::network::constants::Network::Bitcoin;
-    let ctx = secp256k1::Secp256k1::new();
+    let ctx = Secp256k1::new();
 
-    // Tweak to get to child privkey
-    let child_tweak_and_chaincode = extpub_result.ckd_pub_tweak(&ctx, bip32::ChildNumber::Normal(index)).unwrap();
+    // Calculate the tweak
+    let child_tweak_and_chaincode = extpub_result
+        .ckd_pub_tweak(&ctx, bip32::ChildNumber::Normal(index))
+        .unwrap();
+
     let mut child_tweak = child_tweak_and_chaincode.0;
-    // (curve order N)-1 aka -1
-    let minusone : [u8; 32] = hex!("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140");
-    let minusone_key = secp256k1::key::SecretKey::from_slice(&ctx, &minusone).unwrap();
-    child_tweak.mul_assign(&ctx, &minusone_key);
 
-    // Now add to child key
-    let child_key = bitcoin::util::address::Privkey::from_base58check(v[2].trim_right()).unwrap();
-    let mut child_secret = child_key.secret_key().clone();
-    child_secret.add_assign(&ctx, &child_tweak);
+    // Invert the tweak
+    let neg_tweak = child_tweak.negate(&ctx);
 
-    // Re-construct master xprv
-    let fingerprint : [u8; 4] = [0; 4];
+    // Subtract the tweak from the child private key to get the parent private key.
+    let mut child_secret = child_privkey.secret_key().clone();
+
+    let parent_secret = match child_secret.add(&ctx, &neg_tweak) {
+        Ok(secret) => secret,
+        Err(e) => {
+            eprintln!("Error adding secret keys: {:?}", e);
+            process::exit(1);
+        }
+    };
+
+    // Construct the parent xprv
+    let fingerprint: [u8; 4] = [0; 4];
     let finger = bip32::Fingerprint::from(&fingerprint[..]);
-    let xprv = bip32::ExtendedPrivKey {chain_code: extpub_result.chain_code, child_number: bip32::ChildNumber::Normal(0), depth: 0, parent_fingerprint: finger, secret_key: child_secret, network: network};
+    let xprv = bip32::ExtendedPrivKey {
+        chain_code: extpub_result.chain_code,
+        child_number: bip32::ChildNumber::Normal(0),
+        depth: 0,
+        parent_fingerprint: finger,
+        secret_key: parent_secret,
+        network,
+    };
 
     println!("{}", xprv.to_base58check());
 }
+
