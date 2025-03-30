@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Gregory Sanders <gsanders87@gmail.com>"]
 
 [dependencies]
-bitcoin = { version = "*", features = ["util"] }
+bitcoin = { version = "*", features = [] }
 
 secp256k1 = "0.30.0"
 hex-literal = "0.1.0"
